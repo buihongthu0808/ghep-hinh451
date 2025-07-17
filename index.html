@@ -1,0 +1,580 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Bé Vui Ghép Hình</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Itim&display=swap" rel="stylesheet">
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/tone/14.7.77/Tone.js"></script>
+    <style>
+        :root {
+            --cell-size: 3.8vmin; 
+            --candy-bg: #fff0f5;
+            --candy-border: #ff6b6b;
+            --piece-color: #28a745;
+            --template-color: #d3d3d3;
+            --hover-color: #f6e05e;
+        }
+
+        @media (min-width: 768px) and (min-height: 700px) {
+            :root {
+                --cell-size: 24px;
+            }
+        }
+        @media (min-width: 1200px) and (min-height: 850px) {
+            :root {
+                --cell-size: 29px;
+            }
+        }
+
+        body {
+            font-family: 'Itim', cursive;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            background-color: var(--candy-bg);
+            margin: 0;
+            color: #333;
+            user-select: none;
+            overflow: hidden;
+            height: 100vh;
+            width: 100vw;
+            box-sizing: border-box;
+            padding: 1rem;
+        }
+        
+        .game-frame {
+            width: auto;
+            height: auto;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            gap: 1rem;
+            padding: clamp(1rem, 4vmin, 2rem);
+            background-color: rgba(255, 255, 255, 0.6);
+            border-radius: 20px;
+            box-shadow: 0 4px 20px rgba(0,0,0,0.1);
+            backdrop-filter: blur(5px);
+        }
+
+        .decor {
+            position: fixed;
+            font-size: clamp(2rem, 5vmin, 4rem);
+            animation: decor-bounce 5s infinite ease-in-out;
+            opacity: 0.8;
+            z-index: -1;
+        }
+        .decor-1 { top: 10%; left: 5%; transform: rotate(-25deg); animation-delay: 0s; }
+        .decor-2 { top: 20%; right: 3%; transform: rotate(25deg); animation-delay: -1.5s; }
+        .decor-3 { bottom: 15%; left: 8%; transform: rotate(15deg); animation-delay: -2.5s; }
+        .decor-4 { bottom: 25%; right: 10%; transform: rotate(-15deg); animation-delay: -4s; }
+        .decor-5 { top: 55%; left: 3%; transform: rotate(-10deg); animation-delay: -0.8s; }
+        .decor-6 { top: 60%; right: 5%; transform: rotate(10deg); animation-delay: -2s; }
+        .decor-7 { top: 80%; left: 20%; transform: rotate(20deg); animation-delay: -3.2s; }
+        .decor-8 { top: 5%; right: 25%; transform: rotate(-20deg); animation-delay: -4.5s; }
+        
+        @keyframes decor-bounce {
+            50% { transform: translateY(-15px) rotate(var(--fa-rotate-by, 0deg)); }
+        }
+
+        h1 {
+            font-size: clamp(2rem, 7vmin, 3rem);
+            color: #e53e3e;
+            margin: 0;
+            text-align: center;
+        }
+
+        p.instructions {
+            font-size: clamp(1rem, 3.5vmin, 1.2rem);
+            margin: 0.5rem 0;
+            text-align: center;
+        }
+
+        .grid {
+            width: calc(var(--cell-size) * 24);
+            display: grid;
+            position: relative;
+            border: 3px dashed var(--candy-border);
+            border-radius: 10px;
+            background-color: #ffffff;
+            background-image: 
+                repeating-linear-gradient(to right, #e0e0e0 0 1px, transparent 1px 100%),
+                repeating-linear-gradient(to bottom, #e0e0e0 0 1px, transparent 1px 100%);
+            background-size: var(--cell-size) var(--cell-size);
+        }
+
+        #toy-box {
+            grid-template-columns: repeat(24, 1fr);
+            grid-template-rows: repeat(5, 1fr);
+            height: calc(var(--cell-size) * 5);
+            margin-bottom: 1rem;
+        }
+
+        #assembly-area {
+            grid-template-columns: repeat(24, 1fr);
+            grid-template-rows: repeat(9, 1fr);
+            height: calc(var(--cell-size) * 9);
+        }
+        
+        .piece {
+            position: absolute;
+            transform-origin: center center;
+            transition: transform 0.25s ease-in-out, top 0.3s ease-out, left 0.3s ease-out;
+        }
+        
+        .draggable {
+            cursor: grab;
+        }
+        .dragging {
+            cursor: grabbing;
+            z-index: 1000;
+            transition: none;
+        }
+
+        .triangle {
+            width: calc(var(--cell-size) * 3);
+            height: calc(var(--cell-size) * 3);
+            background-color: var(--piece-color);
+            clip-path: polygon(0% 0%, 100% 100%, 0% 100%);
+        }
+        
+        .rectangle {
+            width: calc(var(--cell-size) * 6);
+            height: calc(var(--cell-size) * 3);
+            background-color: var(--piece-color);
+        }
+
+        #p1 { top: calc(var(--cell-size) * 1); left: calc(var(--cell-size) * 1); }
+        #p2 { top: calc(var(--cell-size) * 1); left: calc(var(--cell-size) * 5); }
+        #p3 { top: calc(var(--cell-size) * 1); left: calc(var(--cell-size) * 9); }
+        #p4 { top: calc(var(--cell-size) * 1); left: calc(var(--cell-size) * 13); }
+        #p5 { top: calc(var(--cell-size) * 1); left: calc(var(--cell-size) * 17); }
+
+        .template-piece {
+            background-color: var(--template-color);
+            transition: background-color 0.2s ease, box-shadow 0.2s ease;
+        }
+        
+        .hover-target {
+            background-color: var(--hover-color) !important;
+            box-shadow: 0 0 15px var(--hover-color);
+        }
+
+        #template-p1 { top: 0; left: calc(var(--cell-size) * 9); transform: rotate(270deg); }
+        #template-p2 { top: 0; left: calc(var(--cell-size) * 12); transform: rotate(0deg); }
+        #template-p3 { top: calc(var(--cell-size) * 4); left: calc(var(--cell-size) * 7.5); transform: rotate(270deg); }
+        #template-p4 { top: calc(var(--cell-size) * 4); left: calc(var(--cell-size) * 13.5); transform: rotate(0deg); }
+        #template-p5 { top: calc(var(--cell-size) * 4.5); left: calc(var(--cell-size) * 9); transform: rotate(90deg); }
+
+        .shake { animation: shake 0.5s cubic-bezier(.36,.07,.19,.97) both; }
+        @keyframes shake {
+          10%, 90% { transform: translate3d(-1px, 0, 0) rotate(var(--rotation, 0deg)); }
+          20%, 80% { transform: translate3d(2px, 0, 0) rotate(var(--rotation, 0deg)); }
+          30%, 50%, 70% { transform: translate3d(-4px, 0, 0) rotate(var(--rotation, 0deg)); }
+          40%, 60% { transform: translate3d(4px, 0, 0) rotate(var(--rotation, 0deg)); }
+        }
+
+        .glow { animation: glow 0.7s ease-out; }
+        @keyframes glow {
+          0% { box-shadow: 0 0 0px rgba(255,255,255,0.7); }
+          50% { box-shadow: 0 0 20px 10px rgba(255,255,255,0.9); }
+          100% { box-shadow: 0 0 0px rgba(255,255,255,0.7); }
+        }
+
+        #win-screen {
+            position: fixed; top: 0; left: 0; width: 100%; height: 100%;
+            background-color: rgba(0, 0, 0, 0.7); display: none;
+            justify-content: center; align-items: center; flex-direction: column; z-index: 2000;
+        }
+        #win-screen h2 {
+            font-family: 'Itim', cursive; color: #fff; font-size: clamp(2rem, 6vmin, 3.5rem);
+            text-shadow: 2px 2px 8px #ff69b4;
+        }
+        #play-again-btn {
+            font-family: 'Itim', cursive; font-size: clamp(1.2rem, 4vmin, 1.5rem);
+            padding: 1rem 2rem; border: none; border-radius: 15px;
+            background-color: #48bb78; color: white; cursor: pointer;
+            box-shadow: 0 5px 0 #2f855a; transition: all 0.1s ease-in-out;
+        }
+        #play-again-btn:active {
+            transform: translateY(3px); box-shadow: 0 2px 0 #2f855a;
+        }
+        #win-effect-canvas {
+            position: absolute; top: 0; left: 0; width: 100%; height: 100%; z-index: -1;
+        }
+        .sr-only {
+            position: absolute; width: 1px; height: 1px; padding: 0;
+            margin: -1px; overflow: hidden; clip: rect(0, 0, 0, 0);
+            white-space: nowrap; border-width: 0;
+        }
+    </style>
+</head>
+<body>
+    <div class="decor decor-1">🍭</div>
+    <div class="decor decor-2">🍬</div>
+    <div class="decor decor-3">🍪</div>
+    <div class="decor decor-4">🍭</div>
+    <div class="decor decor-5">🎄</div>
+    <div class="decor decor-6">🎁</div>
+    <div class="decor decor-7">🎄</div>
+    <div class="decor decor-8">🎁</div>
+
+    <main class="game-frame" role="application" aria-label="Trò chơi Bé Vui Ghép Hình">
+        <h1>BÉ VUI GHÉP HÌNH</h1>
+        <p class="instructions">Bé hãy xoay, kéo thả các hình ở trên để lắp ghép hình như mẫu bên dưới nhé.</p>
+
+        <div id="toy-box" role="toolbar" aria-label="Hộp đồ chơi" class="grid">
+            <div id="p1" class="piece triangle draggable" role="button" aria-label="Mảnh ghép tam giác 1, chưa đặt" tabindex="0"></div>
+            <div id="p2" class="piece triangle draggable" role="button" aria-label="Mảnh ghép tam giác 2, chưa đặt" tabindex="0"></div>
+            <div id="p3" class="piece triangle draggable" role="button" aria-label="Mảnh ghép tam giác 3, chưa đặt" tabindex="0"></div>
+            <div id="p4" class="piece triangle draggable" role="button" aria-label="Mảnh ghép tam giác 4, chưa đặt" tabindex="0"></div>
+            <div id="p5" class="piece rectangle draggable" role="button" aria-label="Mảnh ghép chữ nhật, chưa đặt" tabindex="0"></div>
+        </div>
+
+        <div id="assembly-area" aria-label="Khu vực lắp ráp" class="grid">
+            <div id="template-p1" data-shape="triangle" data-rotation="270" class="piece triangle template-piece" aria-label="Vị trí cho mảnh tam giác, xoay 270 độ"></div>
+            <div id="template-p2" data-shape="triangle" data-rotation="0" class="piece triangle template-piece" aria-label="Vị trí cho mảnh tam giác, không xoay"></div>
+            <div id="template-p3" data-shape="triangle" data-rotation="270" class="piece triangle template-piece" aria-label="Vị trí cho mảnh tam giác, xoay 270 độ"></div>
+            <div id="template-p4" data-shape="triangle" data-rotation="0" class="piece triangle template-piece" aria-label="Vị trí cho mảnh tam giác, không xoay"></div>
+            <div id="template-p5" data-shape="rectangle" data-rotation="90" class="piece rectangle template-piece" aria-label="Vị trí cho mảnh chữ nhật, xoay 90 độ"></div>
+        </div>
+    </main>
+    
+    <div id="announcer" class="sr-only" aria-live="assertive" aria-atomic="true"></div>
+
+    <div id="win-screen" role="dialog" aria-modal="true" aria-labelledby="win-message">
+        <canvas id="win-effect-canvas"></canvas>
+        <h2 id="win-message">Chúc mừng, bé làm tốt lắm!</h2>
+        <button id="play-again-btn">Chơi lại</button>
+    </div>
+
+    <script>
+        document.addEventListener('DOMContentLoaded', () => {
+            const toyBox = document.getElementById('toy-box');
+            const assemblyArea = document.getElementById('assembly-area');
+            const draggablePieces = document.querySelectorAll('.draggable');
+            const templatePieces = document.querySelectorAll('.template-piece');
+            const winScreen = document.getElementById('win-screen');
+            const playAgainBtn = document.getElementById('play-again-btn');
+            const announcer = document.getElementById('announcer');
+
+            const correctSynth = new Tone.Synth({ oscillator: { type: 'sine' }, envelope: { attack: 0.005, decay: 0.1, sustain: 0.3, release: 1 } }).toDestination();
+            const errorSynth = new Tone.MembraneSynth({ pitchDecay: 0.05, octaves: 10, oscillator: { type: 'sine' }, envelope: { attack: 0.001, decay: 0.4, sustain: 0.01, release: 1.4, attackCurve: 'exponential' } }).toDestination();
+            errorSynth.volume.value = -6;
+            const applauseSynths = Array(5).fill(null).map(() => new Tone.NoiseSynth({ noise: { type: 'white' }, envelope: { attack: 0.01, decay: 0.15, sustain: 0 } }).toDestination());
+            applauseSynths.forEach(s => s.volume.value = -12);
+
+            const pieceStates = {};
+            const targetStates = {};
+            let draggedPiece = null;
+            let offsetX = 0, offsetY = 0;
+            let startX = 0, startY = 0;
+            let hasMoved = false;
+            
+            let animationFrameId = null;
+            let latestCoords = { x: 0, y: 0 };
+
+            function initializeGame() {
+                draggablePieces.forEach(p => {
+                    pieceStates[p.id] = pieceStates[p.id] || {};
+                    pieceStates[p.id].rotation = 0;
+                    pieceStates[p.id].isPlaced = false;
+                    
+                    toyBox.appendChild(p);
+                    // SỬA LỖI: Xóa style inline để CSS gốc được áp dụng lại
+                    p.style.top = '';
+                    p.style.left = '';
+                    p.style.transform = `rotate(0deg)`;
+                    
+                    p.classList.add('draggable');
+                    p.style.cursor = 'grab';
+                    p.setAttribute('aria-label', p.getAttribute('aria-label').split(',')[0] + ", chưa đặt");
+                    p.setAttribute('aria-grabbed', 'false');
+                });
+                templatePieces.forEach(t => {
+                    targetStates[t.id] = { isOccupied: false };
+                    t.style.display = 'block';
+                });
+            }
+            
+            initializeGame();
+
+            draggablePieces.forEach(piece => {
+                piece.addEventListener('mousedown', startInteraction);
+                piece.addEventListener('touchstart', startInteraction, { passive: false });
+            });
+
+            playAgainBtn.addEventListener('click', resetGame);
+
+            function getEventCoords(e) {
+                return e.touches ? e.touches[0] : e;
+            }
+
+            function startInteraction(e) {
+                if (pieceStates[e.target.id].isPlaced) return;
+                e.preventDefault();
+                
+                draggedPiece = e.target;
+                const coords = getEventCoords(e);
+                startX = coords.clientX;
+                startY = coords.clientY;
+                latestCoords = { x: startX, y: startY };
+                hasMoved = false;
+
+                const rect = draggedPiece.getBoundingClientRect();
+                offsetX = coords.clientX - rect.left;
+                offsetY = coords.clientY - rect.top;
+
+                document.addEventListener('mousemove', updateMove);
+                document.addEventListener('touchmove', updateMove, { passive: false });
+                document.addEventListener('mouseup', stopInteraction);
+                document.addEventListener('touchend', stopInteraction);
+                
+                animationFrameId = requestAnimationFrame(dragLoop);
+            }
+
+            function updateMove(e) {
+                e.preventDefault();
+                const coords = getEventCoords(e);
+                latestCoords.x = coords.clientX;
+                latestCoords.y = coords.clientY;
+            }
+            
+            function dragLoop() {
+                if (!draggedPiece) return;
+
+                if (!hasMoved && (Math.abs(latestCoords.x - startX) > 5 || Math.abs(latestCoords.y - startY) > 5)) {
+                    hasMoved = true;
+                    draggedPiece.classList.add('dragging');
+                    draggedPiece.setAttribute('aria-grabbed', 'true');
+                }
+
+                if (hasMoved) {
+                    const parentRect = assemblyArea.getBoundingClientRect();
+                    let x = latestCoords.x - parentRect.left - offsetX;
+                    let y = latestCoords.y - parentRect.top - offsetY;
+                    
+                    draggedPiece.style.left = `${x}px`;
+                    draggedPiece.style.top = `${y}px`;
+
+                    if (draggedPiece.parentElement !== assemblyArea) {
+                        assemblyArea.appendChild(draggedPiece);
+                    }
+                    checkHover();
+                }
+
+                animationFrameId = requestAnimationFrame(dragLoop);
+            }
+
+            function stopInteraction() {
+                cancelAnimationFrame(animationFrameId);
+
+                if (!draggedPiece) return;
+                draggedPiece.setAttribute('aria-grabbed', 'false');
+
+                if (!hasMoved) {
+                    const state = pieceStates[draggedPiece.id];
+                    state.rotation = (state.rotation + 90) % 360;
+                    draggedPiece.style.transform = `rotate(${state.rotation}deg)`;
+                    announce(`Đã xoay ${draggedPiece.getAttribute('aria-label').split(',')[0]} ${state.rotation} độ`);
+                } else {
+                    draggedPiece.classList.remove('dragging');
+                    const currentTarget = document.querySelector('.hover-target');
+                    let isCorrect = false;
+                    if (currentTarget) {
+                        currentTarget.classList.remove('hover-target');
+                        const targetId = currentTarget.id;
+                        const pieceId = draggedPiece.id;
+                        const pieceShape = draggedPiece.classList.contains('triangle') ? 'triangle' : 'rectangle';
+                        if (!targetStates[targetId].isOccupied && currentTarget.dataset.shape === pieceShape && pieceStates[pieceId].rotation == currentTarget.dataset.rotation) {
+                            isCorrect = true;
+                            handleCorrectDrop(currentTarget);
+                        }
+                    }
+                    if (!isCorrect) {
+                        handleIncorrectDrop(draggedPiece);
+                    }
+                }
+                draggedPiece = null;
+                document.removeEventListener('mousemove', updateMove);
+                document.removeEventListener('touchmove', updateMove);
+                document.removeEventListener('mouseup', stopInteraction);
+                document.removeEventListener('touchend', stopInteraction);
+            }
+            
+            function handleCorrectDrop(target) {
+                const state = pieceStates[draggedPiece.id];
+                state.isPlaced = true;
+                targetStates[target.id].isOccupied = true;
+                correctSynth.triggerAttackRelease("C5", "8n", Tone.now());
+                announce(`${draggedPiece.getAttribute('aria-label').split(',')[0]} đã được đặt đúng vị trí.`);
+                draggedPiece.classList.add('glow');
+                setTimeout(() => draggedPiece.classList.remove('glow'), 700);
+                const targetStyle = window.getComputedStyle(target);
+                draggedPiece.style.top = targetStyle.top;
+                draggedPiece.style.left = targetStyle.left;
+                draggedPiece.style.transform = targetStyle.transform;
+                target.style.display = 'none';
+                draggedPiece.classList.remove('draggable');
+                draggedPiece.style.cursor = 'default';
+                draggedPiece.setAttribute('aria-label', draggedPiece.getAttribute('aria-label').split(',')[0] + ", đã đặt đúng");
+                checkWinCondition();
+            }
+
+            function handleIncorrectDrop(pieceToReturn) {
+                errorSynth.triggerAttackRelease("C2", "8n", Tone.now());
+                announce("Sai rồi, thử lại nhé!");
+                const state = pieceStates[pieceToReturn.id];
+                pieceToReturn.style.transition = 'none';
+                pieceToReturn.style.setProperty('--rotation', `${state.rotation}deg`);
+                const onAnimationEnd = () => {
+                    pieceToReturn.style.transition = 'transform 0.25s ease-in-out, top 0.3s ease-out, left 0.3s ease-out';
+                    toyBox.appendChild(pieceToReturn);
+                    pieceToReturn.style.top = '';
+                    pieceToReturn.style.left = '';
+                    pieceToReturn.style.transform = `rotate(${state.rotation}deg)`;
+                    pieceToReturn.classList.remove('shake');
+                };
+                pieceToReturn.addEventListener('animationend', onAnimationEnd, { once: true });
+                pieceToReturn.classList.add('shake');
+            }
+
+            function checkHover() {
+                if (!draggedPiece) return;
+                const draggedPieceShape = draggedPiece.classList.contains('triangle') ? 'triangle' : 'rectangle';
+                const draggedRect = draggedPiece.getBoundingClientRect();
+                const draggedCenterX = draggedRect.left + draggedRect.width / 2;
+                const draggedCenterY = draggedRect.top + draggedRect.height / 2;
+                let closestTarget = null;
+                let minDistance = Infinity;
+                templatePieces.forEach(target => {
+                    if (targetStates[target.id].isOccupied) return;
+                    const targetShape = target.dataset.shape;
+                    if (draggedPieceShape !== targetShape) {
+                        return;
+                    }
+                    const targetRect = target.getBoundingClientRect();
+                    const targetCenterX = targetRect.left + targetRect.width / 2;
+                    const targetCenterY = targetRect.top + targetRect.height / 2;
+                    const distance = Math.sqrt(Math.pow(draggedCenterX - targetCenterX, 2) + Math.pow(draggedCenterY - targetCenterY, 2));
+                    if (distance < minDistance) {
+                        minDistance = distance;
+                        closestTarget = target;
+                    }
+                });
+                templatePieces.forEach(target => {
+                    target.classList.remove('hover-target');
+                });
+                const snapThreshold = parseFloat(getComputedStyle(document.documentElement).getPropertyValue('--cell-size')) * 1.5;
+                if (closestTarget && minDistance < snapThreshold) {
+                    closestTarget.classList.add('hover-target');
+                }
+            }
+
+            function announce(message) {
+                announcer.textContent = message;
+            }
+
+            function playApplause() {
+                let clapCount = 0;
+                const clapInterval = setInterval(() => {
+                    applauseSynths.forEach((synth, index) => {
+                        setTimeout(() => synth.triggerAttack(), index * 20 + Math.random() * 20);
+                    });
+                    clapCount++;
+                    if (clapCount > 10) clearInterval(clapInterval);
+                }, 100);
+            }
+
+            function checkWinCondition() {
+                const allPlaced = Object.values(pieceStates).every(s => s.isPlaced);
+                if (allPlaced) {
+                    setTimeout(() => {
+                        winScreen.style.display = 'flex';
+                        announce("Chúc mừng, bé làm tốt lắm!");
+                        startConfetti();
+                        playApplause();
+                    }, 800);
+                }
+            }
+
+            function resetGame() {
+                winScreen.style.display = 'none';
+                stopConfetti();
+                initializeGame();
+                announce("Trò chơi đã được bắt đầu lại.");
+            }
+
+            const canvas = document.getElementById('win-effect-canvas');
+            const ctx = canvas.getContext('2d');
+            let confetti = [];
+            let winAnimationId;
+
+            function startConfetti() {
+                canvas.width = window.innerWidth;
+                canvas.height = window.innerHeight;
+                createConfettiBurst();
+                function animate() {
+                    winAnimationId = requestAnimationFrame(animate);
+                    ctx.fillStyle = 'rgba(0, 0, 0, 0.05)';
+                    ctx.fillRect(0, 0, canvas.width, canvas.height);
+                    confetti.forEach((p, index) => {
+                        p.update();
+                        if (p.alpha <= 0) confetti.splice(index, 1);
+                    });
+                }
+                animate();
+            }
+            
+            function createConfettiBurst() {
+                const burstX = canvas.width / 2;
+                const burstY = canvas.height / 2;
+                for (let i = 0; i < 200; i++) {
+                    confetti.push(new ConfettiParticle(burstX, burstY));
+                }
+            }
+
+            function stopConfetti() {
+                cancelAnimationFrame(winAnimationId);
+                confetti = [];
+                if (canvas) {
+                    ctx.clearRect(0, 0, canvas.width, canvas.height);
+                }
+            }
+
+            class ConfettiParticle {
+                constructor(x, y) {
+                    this.x = x; this.y = y;
+                    this.colors = ['#f6e05e', '#ff6b6b', '#48bb78', '#4299e1', '#9f7aea', '#ffffff'];
+                    this.color = this.colors[Math.floor(Math.random() * this.colors.length)];
+                    this.radius = Math.random() * 4 + 2;
+                    this.alpha = 1;
+                    const angle = Math.random() * Math.PI * 2;
+                    const speed = Math.random() * 7 + 2;
+                    this.velocity = { x: Math.cos(angle) * speed, y: Math.sin(angle) * speed };
+                }
+                draw() {
+                    ctx.save();
+                    ctx.globalAlpha = this.alpha;
+                    ctx.beginPath();
+                    ctx.arc(this.x, this.y, this.radius, 0, Math.PI * 2, false);
+                    ctx.fillStyle = this.color;
+                    ctx.fill();
+                    ctx.restore();
+                }
+                update() {
+                    this.x += this.velocity.x;
+                    this.y += this.velocity.y;
+                    this.velocity.y += 0.05;
+                    this.alpha -= 0.01;
+                    this.draw();
+                }
+            }
+        });
+    </script>
+
+</body>
+</html>
