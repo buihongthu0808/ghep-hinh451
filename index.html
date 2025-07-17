@@ -279,19 +279,18 @@
 
             function initializeGame() {
                 draggablePieces.forEach(p => {
-                    if (!pieceStates[p.id]) {
-                         const computedStyle = window.getComputedStyle(p);
-                         pieceStates[p.id] = {
-                            originalTop: computedStyle.top,
-                            originalLeft: computedStyle.left,
-                         };
-                    }
-                    pieceStates[p.id].rotation = 0;
-                    pieceStates[p.id].isPlaced = false;
+                    // SỬA LỖI: Chỉ lưu trữ trạng thái, không lưu vị trí
+                    pieceStates[p.id] = {
+                        rotation: 0,
+                        isPlaced: false,
+                    };
+                    
                     toyBox.appendChild(p);
-                    p.style.top = pieceStates[p.id].originalTop;
-                    p.style.left = pieceStates[p.id].originalLeft;
+                    // Xóa style inline để CSS gốc được áp dụng lại
+                    p.style.top = '';
+                    p.style.left = '';
                     p.style.transform = `rotate(0deg)`;
+                    
                     p.classList.add('draggable');
                     p.style.cursor = 'grab';
                     p.setAttribute('aria-label', p.getAttribute('aria-label').split(',')[0] + ", chưa đặt");
@@ -432,21 +431,21 @@
                 announce("Sai rồi, thử lại nhé!");
                 const state = pieceStates[pieceToReturn.id];
                 
-                // SỬA LỖI CHO IOS: Dùng setTimeout thay cho animationend
                 pieceToReturn.style.transition = 'none';
                 pieceToReturn.style.setProperty('--rotation', `${state.rotation}deg`);
-                pieceToReturn.classList.add('shake');
                 
-                setTimeout(() => {
+                const onAnimationEnd = () => {
+                    pieceToReturn.style.transition = 'transform 0.25s ease-in-out, top 0.3s ease-out, left 0.3s ease-out';
+                    toyBox.appendChild(pieceToReturn);
+                    // SỬA LỖI: Xóa style inline để CSS gốc được áp dụng lại
+                    pieceToReturn.style.top = '';
+                    pieceToReturn.style.left = '';
+                    pieceToReturn.style.transform = `rotate(${state.rotation}deg)`;
                     pieceToReturn.classList.remove('shake');
-                    requestAnimationFrame(() => {
-                        pieceToReturn.style.transition = 'transform 0.25s ease-in-out, top 0.3s ease-out, left 0.3s ease-out';
-                        toyBox.appendChild(pieceToReturn);
-                        pieceToReturn.style.top = state.originalTop;
-                        pieceToReturn.style.left = state.originalLeft;
-                        pieceToReturn.style.transform = `rotate(${state.rotation}deg)`;
-                    });
-                }, 500);
+                };
+
+                pieceToReturn.addEventListener('animationend', onAnimationEnd, { once: true });
+                pieceToReturn.classList.add('shake');
             }
 
             function checkHover() {
